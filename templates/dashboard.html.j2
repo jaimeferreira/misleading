@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Misleading Tweets Report</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#1b1b1a; --muted:#6b6b66; --line:#e4e3de; --card:#fff; --accent:#b4341f; --up:#b4341f; --down:#2f7d4f; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161615; --fg:#ecebe6; --muted:#9a9993; --line:#2c2c2a; --card:#1e1e1c; --accent:#ee7a63; --up:#ee7a63; --down:#6fcf97; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { max-width:880px; margin:0 auto; padding:32px 16px 64px; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  h2 { font-size:17px; margin:40px 0 12px; }
+  .meta, .note { color:var(--muted); font-size:13px; }
+  .note { margin:8px 0 0; }
+  .narr { background:var(--card); border:1px solid var(--line); border-radius:8px; margin:8px 0; }
+  .narr > summary { display:grid; grid-template-columns:28px 1fr auto auto; gap:12px; align-items:center; padding:12px 14px; cursor:pointer; list-style:none; }
+  .narr > summary::-webkit-details-marker { display:none; }
+  .rank { color:var(--muted); font-variant-numeric:tabular-nums; }
+  .title { font-weight:600; }
+  .desc { color:var(--muted); font-size:13px; font-weight:400; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .delta.up { color:var(--up); } .delta.down { color:var(--down); }
+  .badge { font-size:11px; color:var(--accent); border:1px solid var(--accent); border-radius:4px; padding:0 4px; margin-left:6px; vertical-align:1px; }
+  .spark { color:var(--accent); vertical-align:middle; }
+  ul.tweets { list-style:none; margin:0; padding:0 14px 12px 54px; }
+  ul.tweets li, .flat li { padding:8px 0; border-top:1px solid var(--line); }
+  .flat { list-style:none; padding:0; margin:0; }
+  .tmeta { color:var(--muted); font-size:12px; }
+  a { color:var(--accent); }
+  @media (max-width:560px) { .narr > summary { grid-template-columns:24px 1fr auto; } .narr > summary .spark-cell { display:none; } ul.tweets { padding-left:14px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Misleading tweets report</h1>
+  <div class="meta">
+    Tweets with a Community Note rated helpful as misleading, last {{ s.window_days }} days.
+    Data as of {{ s.data_as_of[:16].replace('T', ' ') }} UTC · generated {{ s.generated_at[:16].replace('T', ' ') }} UTC.
+  </div>
+  <p class="note">Traction is a <strong>proxy</strong> from the notes data (helpful notes, distinct authors, recency), not views or likes. {{ s.total_tweets }} tweets in window.</p>
+
+  {% if s.clustered %}
+  <h2>Top narratives</h2>
+  {% for n in s.narratives %}
+  <details class="narr">
+    <summary>
+      <span class="rank">{{ loop.index }}</span>
+      <span>
+        <span class="title">{{ n.title }}</span>{% if n.is_new %}<span class="badge">new</span>{% endif %}
+        <div class="desc">{{ n.description }}</div>
+      </span>
+      <span class="spark-cell">{{ sparkline(n.history) }}</span>
+      <span class="num">
+        {{ '%.1f'|format(n.score) }}
+        <div class="tmeta">{{ n.n_tweets }} tweet{{ '' if n.n_tweets == 1 else 's' }}
+          {% if n.delta is not none %}<span class="delta {{ 'up' if n.delta > 0 else 'down' if n.delta < 0 else '' }}">{{ '%+.1f'|format(n.delta) }}</span>{% endif %}
+        </div>
+      </span>
+    </summary>
+    <ul class="tweets">
+      {% for t in n.tweets %}
+      <li>
+        <a href="{{ t.url }}" rel="noopener noreferrer">tweet {{ t.tweet_id }}</a>
+        <span class="tmeta">· score {{ '%.1f'|format(t.score) }} · {{ t.helpful_notes }} helpful note{{ '' if t.helpful_notes == 1 else 's' }}</span>
+        <div>{{ t.summary }}</div>
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% else %}
+  <p class="note">No narratives yet.</p>
+  {% endfor %}
+  {% if s.unclustered_tweets %}<p class="note">{{ s.unclustered_tweets }} tweets in window are not assigned to a narrative yet (only the top-ranked are clustered).</p>{% endif %}
+  {% endif %}
+
+  <h2>Top tweets</h2>
+  <ul class="flat">
+    {% for t in s.tweets %}
+    <li>
+      <span class="rank">{{ loop.index }}.</span>
+      <a href="{{ t.url }}" rel="noopener noreferrer">tweet {{ t.tweet_id }}</a>
+      <span class="tmeta">· score {{ '%.1f'|format(t.score) }} · {{ t.helpful_notes }} helpful / {{ t.total_notes }} total notes · rated {{ t.rated_helpful_at[:10] }}</span>
+      <div>{{ t.summary }}</div>
+    </li>
+    {% endfor %}
+  </ul>
+</main>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Rolling window (days) for "recently rated helpful" misleading notes.
+window_days: 7
+
+# How far back to look for the newest published dump (the dump lags ~2 days).
+max_dump_lookback_days: 6
+
+# Proxy traction score (no X API in v1):
+#   score = (w_helpful_notes * helpful_notes
+#          + w_authors       * distinct_note_authors
+#          + w_total_notes   * log1p(all_misleading_notes))
+#          * 0.5 ** (days_since_rated_helpful / recency_half_life_days)
+score:
+  w_helpful_notes: 3.0
+  w_authors: 2.0
+  w_total_notes: 1.0
+  recency_half_life_days: 3.0
+
+# LLM clustering of tweets into narratives, via OpenRouter.
+# Needs OPENROUTER_API_KEY; without it the report is a flat tweet ranking.
+llm:
+  model: google/gemini-2.5-flash
+  endpoint: https://openrouter.ai/api/v1/chat/completions
+  top_n_tweets: 300        # only the top-ranked tweets are clustered
+  batch_size: 40
+  max_existing_narratives: 150
+  narrative_active_days: 30
+
+report:
+  top_narratives: 25
+  top_tweets: 50
+  tweets_per_narrative: 8
+  history_days: 14         # sparkline length
